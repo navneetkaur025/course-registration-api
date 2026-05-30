@@ -1,7 +1,16 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from bs4 import BeautifulSoup
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 courses_db = {}
 
@@ -37,7 +46,7 @@ async def import_catalog(file: UploadFile = File(...)):
 
         prerequisites = cols[3].get_text(strip=True)
 
-        cross_listed = bool(cols[4].get_text(strip=True))
+        cross_listed = cols[4].get_text(strip=True).lower() == "true"
 
         courses_db[course_code] = {
             "course_code": course_code,
