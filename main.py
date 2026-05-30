@@ -14,12 +14,16 @@ app.add_middleware(
 
 courses_db = {}
 
+
 @app.get("/")
 def home():
     return {"message": "Course Catalog API Running"}
 
+
 @app.post("/api/v1/admin/catalog/import")
 async def import_catalog(file: UploadFile = File(...)):
+    global courses_db
+
     content = await file.read()
     soup = BeautifulSoup(content, "html.parser")
 
@@ -27,6 +31,8 @@ async def import_catalog(file: UploadFile = File(...)):
 
     if not table:
         raise HTTPException(status_code=400, detail="No table found")
+
+    courses_db.clear()
 
     rows = table.find_all("tr")[1:]
 
@@ -41,22 +47,26 @@ async def import_catalog(file: UploadFile = File(...)):
 
         try:
             credits = int(cols[2].get_text(strip=True))
-        except:
+        except ValueError:
             credits = 0
 
         prerequisites = cols[3].get_text(strip=True)
 
-        cross_listed = cols[4].get_text(strip=True).lower() == "true"
+        cross_listed_value = cols[4].get_text(strip=True)
 
         courses_db[course_code] = {
             "course_code": course_code,
             "title": title,
             "credits": credits,
             "prerequisites": prerequisites,
-            "cross_listed": cross_listed
+            "cross_listed": bool(cross_listed_value)
         }
 
-    return {"status": "success", "courses_imported": len(courses_db)}
+    return {
+        "status": "success",
+        "courses_imported": len(courses_db)
+    }
+
 
 @app.get("/api/v1/catalog/courses/{course_code}")
 def get_course(course_code: str):
